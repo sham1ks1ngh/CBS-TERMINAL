@@ -1,6 +1,103 @@
-# customer_info.py (Append/Update these sections)
-import mysql.connector
+# customer_info.py
+import pymysql
 from connection import connect_db
+
+def view_customer_details():
+    """Fetches and displays the specific profile metrics of a target customer entry."""
+    print("\n" + "-"*15 + " VIEW CUSTOMER PROFILE " + "-"*15)
+    acc_id = input("Enter Customer Account ID: ").strip()
+
+    db = connect_db()
+    if not db:
+        return
+    cursor = db.cursor(pymysql.cursors.DictCursor)
+
+    try:
+        cursor.execute("SELECT * FROM customers WHERE acc_id = %s", (acc_id,))
+        row = cursor.fetchone()
+
+        if row:
+            print("\n" + "="*40)
+            print(f"ACCOUNT HOLDER : {row['acc_holder']}")
+            print(f"ACCOUNT ID     : {row['acc_id']}")
+            print(f"GENDER (SEX)   : {row['sex']}")
+            print(f"DATE OF BIRTH  : {row['dob']}")
+            print(f"RESIDENCE ADDR : {row['address']}")
+            print(f"CURRENT BALANCE: ₹{row['current_balance']:.2f}")
+            print(f"TOTAL LOGS     : {row['total_transactions']} logs")
+            print(f"LEDGER STATUS  : {row['status']}")
+            print("="*40 + "\n")
+        else:
+            print(f"[Record Error] No customer found matching Account ID: {acc_id}\n")
+    except pymysql.MySQLError as err:
+        print(f"[Database Error] Query execution failure: {err}\n")
+    finally:
+        cursor.close()
+        db.close()
+
+def view_all_customers_table():
+    """Prints a structured tabular master ledger overview of all customers."""
+    db = connect_db()
+    if not db:
+        return
+    cursor = db.cursor(pymysql.cursors.DictCursor)
+
+    try:
+        cursor.execute("SELECT acc_id, acc_holder, current_balance, status FROM customers")
+        rows = cursor.fetchall()
+
+        if rows:
+            print("\n" + "="*70)
+            print(f"{'ACC ID':<8} | {'ACCOUNT HOLDER':<25} | {'BALANCE':<15} | {'STATUS':<10}")
+            print("="*70)
+            for row in rows:
+                print(f"{row['acc_id']:<8} | {row['acc_holder']:<25} | ₹{row['current_balance']:<14.2f} | {row['status']:<10}")
+            print("="*70 + "\n")
+        else:
+            print("[System Alert] The core customer database ledger is currently empty.\n")
+    except pymysql.MySQLError as err:
+        print(f"[Database Error] Table compilation failure: {err}\n")
+    finally:
+        cursor.close()
+        db.close()
+
+def edit_customer_details(user_right):
+    """Allows administrators to update a customer's address profile information."""
+    if user_right.lower() != "admin":
+        print("\n[ACCESS DENIED] Security Exception: Only Admins can modify customer indices.\n")
+        return
+
+    print("\n" + "-"*15 + " EDIT CUSTOMER PROFILE " + "-"*15)
+    acc_id = input("Enter Customer Account ID to Update: ").strip()
+
+    db = connect_db()
+    if not db:
+        return
+    cursor = db.cursor(pymysql.cursors.DictCursor)
+
+    try:
+        cursor.execute("SELECT acc_holder, address FROM customers WHERE acc_id = %s", (acc_id,))
+        row = cursor.fetchone()
+
+        if not row:
+            print(f"[Record Error] No customer found matching Account ID: {acc_id}\n")
+            return
+
+        print(f"Current Address for {row['acc_holder']}: {row['address']}")
+        new_address = input("Enter New Residential Address: ").strip()
+
+        if not new_address:
+            print("[Update Aborted] Address input field cannot be left blank.\n")
+            return
+
+        cursor.execute("UPDATE customers SET address = %s WHERE acc_id = %s", (new_address, acc_id))
+        db.commit()
+        print(f"[SUCCESS] Core profile address for Account ID {acc_id} has been modified.\n")
+    except pymysql.MySQLError as err:
+        print(f"[Database Error] Modification write failed: {err}\n")
+    finally:
+        cursor.close()
+        db.close()
 
 def add_new_customer(user_right):
     """Allows administrators to register a brand new customer account entry."""
@@ -31,7 +128,6 @@ def add_new_customer(user_right):
         return
     cursor = db.cursor()
 
-    # Query excludes acc_id so MySQL AUTO_INCREMENT triggers automatically
     query = """
         INSERT INTO customers (acc_holder, sex, dob, address, current_balance, total_transactions, status)
         VALUES (%s, %s, %s, %s, %s, 0, 'ACTIVE')
@@ -39,15 +135,13 @@ def add_new_customer(user_right):
     try:
         cursor.execute(query, (name, sex, dob, address, opening_balance))
         db.commit()
-        # Fetch the automatically generated ID
         new_id = cursor.lastrowid
         print(f"\n[SUCCESS] New customer registered successfully! Assigned Account ID: {new_id}\n")
-    except mysql.connector.Error as err:
+    except pymysql.MySQLError as err:
         print(f"[Database Error] Could not register account: {err}\n")
     finally:
         cursor.close()
         db.close()
-
 
 def remove_customer(user_right):
     """Permanently deletes a customer file from the system database ledger."""
@@ -64,7 +158,6 @@ def remove_customer(user_right):
     cursor = db.cursor()
 
     try:
-        # Check existence first
         cursor.execute("SELECT acc_holder FROM customers WHERE acc_id = %s", (acc_id,))
         customer = cursor.fetchone()
         if not customer:
@@ -78,14 +171,14 @@ def remove_customer(user_right):
             print(f"[SUCCESS] Account ID {acc_id} has been completely removed from the core ledger.\n")
         else:
             print("Deletion aborted cleanly.\n")
-    except mysql.connector.Error as err:
+    except pymysql.MySQLError as err:
         print(f"[Database Error] Dependency violation or error: {err}\n")
     finally:
         cursor.close()
         db.close()
 
-
 def customer_menu_portal(user_right):
+    """Main routing dashboard terminal loop for Customer Account metrics."""
     print("\n" + "-"*15 + " CUSTOMER MODULE " + "-"*15)
     print("1. View Specific Customer Profile")
     print("2. Print Master Table of Every Record")
@@ -96,10 +189,8 @@ def customer_menu_portal(user_right):
     
     choice = input("Enter option (1-5): ").strip()
     if choice == "1":
-        # logic from previous step
         view_customer_details()
     elif choice == "2":
-        # logic from previous step
         view_all_customers_table()
     elif choice == "3":
         edit_customer_details(user_right)
