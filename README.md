@@ -1,25 +1,30 @@
 # Core Banking System (CBS) — Terminal Interface
 
-The **Core Banking System (CBS)** is a modular, secure, multi-tier command-line interface (CLI) application engineered in **Python** and backed by a local **MySQL** relational database. The platform simulates mission-critical financial operations including **Role-Based Access Control (RBAC)**, customer profile lifecycle administration, atomic ledger transaction recording with ACID adherence, and administrative account security mitigation systems.
+The **Core Banking System (CBS)** is a modular, secure, multi-tier command-line interface (CLI) application engineered in **Python** and backed by a local **MySQL** relational database. The platform simulates mission-critical banking operations including **Role-Based Access Control (RBAC)**, customer profile management, secure financial transactions, administrative account management, and comprehensive transaction auditing.
 
 ---
 
 # 1. Core Engineering Architecture
 
-### Role-Based Access Control (RBAC)
-Restricts high-clearance execution segments (`-employee`, `-status`) strictly to users authenticated with **ADMIN** privileges, while permitting standard transactional access for banking **STAFF**.
+## Role-Based Access Control (RBAC)
 
-### Atomic Financial Execution Engine
-Ensures data integrity for cash updates including deposits (`CREDIT`), withdrawals (`DEBIT`), and inter-account transfers (`TRANSFER`) through structured query compilation.
+Restricts administrative commands (`-employee`, `-status`) exclusively to authenticated **ADMIN** users while allowing standard banking operations for **STAFF** accounts.
 
-### Transaction Rollback Protection
-Employs programmatic `db.rollback()` exception handling routines during unexpected mid-transit execution or connection drops to eliminate ledger fragmentation and financial balance anomalies.
+## Atomic Financial Execution Engine
 
-### Administrative Access Isolation
-Implements a localized security subsystem allowing administrators to actively verify structural logs, implement `BLOCKED` account states, or reinstate an `ACTIVE` operational profile on targeted worker or client records.
+Processes deposits (`CREDIT`), withdrawals (`DEBIT`), and inter-account transfers (`TRANSFER`) while preserving transaction integrity through database transaction management.
 
-### Comprehensive Master Ledger Auditing
-Renders formatted tabular data schemas directly to the console window displaying comprehensive execution logs including sender, recipient, transactional classifications, chronological timestamps, and absolute valuations.
+## Transaction Rollback Protection
+
+Automatically invokes `db.rollback()` whenever an exception occurs during a transaction, preventing partial updates and ensuring database consistency.
+
+## Administrative Access Isolation
+
+Allows administrators to manage employee accounts, review customer information, and modify account states (`ACTIVE` / `BLOCKED`) without exposing privileged functionality to standard staff members.
+
+## Comprehensive Master Ledger Auditing
+
+Displays structured transaction histories including sender, receiver, transaction type, amount, and timestamps directly within the terminal.
 
 ---
 
@@ -27,15 +32,15 @@ Renders formatted tabular data schemas directly to the console window displaying
 
 ```text
 CBS-TERMINAL/
-├── cbs.sql                # Master self-contained database schema initialization script
-├── connection.py          # Relational database connector abstraction layer
-├── login.py               # Authentication middleware and credential verification logic
-├── help.py                # State-aware, role-contextual command dictionary
-├── main.py                # Primary runtime application shell orchestrator
-├── customer_info.py       # Customer data management (CRUD processes / Datagrids)
-├── employees_info.py      # Workforce administration tools (Admin Clearance Restricted)
-├── banking_operations.py  # Financial ledger transaction router
-└── status.py              # Account state modification panel (Admin Clearance Restricted)
+├── cbs.sql                # Database schema and default seed data
+├── connection.py          # Database connection manager
+├── login.py               # Authentication system
+├── help.py                # Interactive command reference
+├── main.py                # Application entry point
+├── customer_info.py       # Customer CRUD operations
+├── employees_info.py      # Employee management (Admin only)
+├── banking_operations.py  # Banking transaction engine
+└── status.py              # Account status management (Admin only)
 ```
 
 ---
@@ -44,68 +49,63 @@ CBS-TERMINAL/
 
 ## 3.1 Base Operating Environment
 
-- **Python Runtime:** Python 3.8 or higher
-- **Database Management System:** MySQL Server 8.0 or higher
-- **Terminal Shell:** PowerShell, Bash, Zsh, or Command Prompt with UTF-8 character encoding support
+- Python **3.8** or later
+- MySQL Server **8.0** or later
+- Windows PowerShell, Command Prompt, Bash, or Zsh
 
-## 3.2 External Library Dependencies
+---
 
-The system relies on the official MySQL driver for secure database communication.
+## 3.2 Python Dependency
 
-```text
-mysql-connector-python
+The application now uses **PyMySQL**, a pure-Python MySQL driver that improves portability and eliminates native driver compatibility issues.
+
+Install it using:
+
+```bash
+pip install pymysql
 ```
 
 ---
 
-# 4. Environment Configuration & Installation
+# 4. Environment Configuration
 
-## Step 1: Database Initialization
+## Step 1 — Configure Database Credentials
 
-Before launching the application, initialize the database.
-
-1. Open **MySQL Workbench**.
-2. Select **File → Open SQL Script**.
-3. Open the provided **cbs.sql** file.
-4. Execute the entire script.
-
-This will:
-
-- Create the required database.
-- Create all tables.
-- Configure foreign keys.
-- Configure auto-increment values.
-- Seed default records.
-
----
-
-## Step 2: Configure Database Credentials
-
-Open **connection.py** and update the configuration.
+Open `connection.py` and update the database configuration with the appropriate credentials if required.
 
 ```python
-# connection.py
-
 config = {
-    'host': 'localhost',
-    'user': 'root',                 # Replace with your MySQL username
-    'password': 'YourPasswordHere', # Replace with your MySQL password
+    "host": "your_database_host",
+    "user": "your_username",
+    "password": "your_password",
+    "database": "cbs"
 }
 ```
 
+> **Note:** If you're using the hosted database provided with the project, no local database setup or SQL script execution is required.
+
 ---
 
-## Step 3: Install Required Dependency
+## Step 2 — Install Required Dependency
 
 ```bash
-pip install mysql-connector-python
+pip install pymysql
 ```
 
 ---
 
-# 5. Deployment & Execution
+## Step 3 — Run the Application
 
-Run the application using:
+```bash
+python main.py
+```
+
+
+---
+
+# 5. Running the Application
+
+Launch the application using:
 
 ```bash
 python main.py
@@ -113,117 +113,112 @@ python main.py
 
 ---
 
-## 5.1 Interactive Command Guide
+# 5.1 Interactive Command Guide
 
 | Command | Access Level | Description |
-|---------|--------------|-------------|
-| `-help` | Guest / Staff / Admin | Displays all available commands based on current login session. |
-| `-clear` | Guest / Staff / Admin | Clears the terminal screen. |
-| `-login` | Guest / Staff / Admin | Opens the secure login interface. |
-| `-customer` | Staff / Admin | Customer management (Create, View, Update, Delete). |
-| `-transaction` | Staff / Admin | Deposit, Withdrawal, Transfer, Transaction History. |
-| `-employee` | **Admin Only** | Employee management interface. |
-| `-status` | **Admin Only** | Change account status (ACTIVE / BLOCKED). |
-| `-logout` | Staff / Admin | Ends the current user session. |
-| `-exit` | Guest / Staff / Admin | Safely exits the application and closes the database connection. |
+|----------|-------------|-------------|
+| `-help` | Guest / Staff / Admin | Display available commands |
+| `-clear` | Guest / Staff / Admin | Clear terminal screen |
+| `-login` | Guest / Staff / Admin | Log into the system |
+| `-customer` | Staff / Admin | Customer management |
+| `-transaction` | Staff / Admin | Deposit, withdrawal, transfer, history |
+| `-employee` | Admin Only | Employee management |
+| `-status` | Admin Only | Modify account status |
+| `-logout` | Staff / Admin | Logout current user |
+| `-exit` | Guest / Staff / Admin | Exit application |
 
 ---
 
 # 6. Troubleshooting
 
-## 6.1 Database Connection Error
+## 6.1 Cannot Connect to MySQL
 
 ### Symptom
 
-```text
-mysql.connector.errors.InterfaceError:
-2003: Can't connect to MySQL server on 'localhost'
+```
+Can't connect to MySQL server on 'localhost'
 ```
 
 ### Solution
 
-Ensure that your MySQL Server is running.
+Ensure the MySQL service is running.
 
-On Windows:
+Windows PowerShell:
 
 ```powershell
 Start-Service -Name "mysql"
 ```
 
-Alternatively, open **Services.msc** and manually start the **MySQL** service.
+or manually start the service from **Services.msc**.
 
 ---
 
-## 6.2 Authentication Failure
+## 6.2 Invalid MySQL Credentials
 
 ### Symptom
 
-```text
-mysql.connector.errors.ProgrammingError:
-1045 (28000): Access denied for user 'root'@'localhost'
+```
+Access denied for user 'root'@'localhost'
 ```
 
 ### Solution
 
 Verify the credentials inside `connection.py`.
 
-Example:
-
 ```python
 config = {
-    'host': 'localhost',
-    'user': 'root',
-    'password': 'YourPasswordHere'
+    "host": "localhost",
+    "user": "root",
+    "password": "YourPasswordHere",
+    "database": "cbs"
 }
 ```
 
 Ensure:
 
-- Username is correct.
-- Password is correct.
-- No extra spaces are present.
+- Username is correct
+- Password is correct
+- Database name is `cbs`
 
 ---
 
-## 6.3 Missing Python Driver
+## 6.3 Missing PyMySQL Driver
 
 ### Symptom
 
-```text
-ModuleNotFoundError:
-No module named 'mysql'
+```
+ModuleNotFoundError: No module named 'pymysql'
 ```
 
 ### Solution
 
-Install the required driver.
+Install PyMySQL:
 
 ```bash
-python -m pip install mysql-connector-python
+python -m pip install pymysql
 ```
 
 ---
 
-## 6.4 Missing Database
+## 6.4 Unknown Database
 
 ### Symptom
 
-```text
-mysql.connector.errors.ProgrammingError:
-1049 (42000): Unknown database 'cbs'
+```
+Unknown database 'cbs'
 ```
 
 ### Solution
 
-The database has not been created.
+Execute the provided `cbs.sql` file.
 
-Execute the provided `cbs.sql` file or run:
+Alternatively:
 
 ```sql
 CREATE DATABASE cbs;
 ```
 
-Then rerun the SQL initialization script.
+Then rerun `cbs.sql`.
 
 ---
 
@@ -231,25 +226,37 @@ Then rerun the SQL initialization script.
 
 - Python 3.8+
 - MySQL Server 8.0+
-- mysql-connector-python
+- PyMySQL
 
 ---
 
 # Features
 
-- Role-Based Access Control (RBAC)
-- Secure Authentication System
+- Secure Role-Based Access Control (RBAC)
+- Authentication System
 - Customer Management
 - Employee Management
-- Deposit, Withdrawal & Transfer Operations
+- Deposit Operations
+- Withdrawal Operations
+- Inter-account Transfers
 - Transaction History
-- Account Status Control (ACTIVE/BLOCKED)
-- ACID-Compliant Transactions
-- Automatic Rollback Protection
-- Console-Based Interactive Interface
+- Account Status Management
+- ACID-Compliant Database Transactions
+- Automatic Transaction Rollback
+- Interactive Command-Line Interface (CLI)
+- Pure-Python Database Driver (PyMySQL)
+
+---
+
+# Release Highlights
+
+- Migrated from **mysql-connector-python** to **PyMySQL** for improved portability and runtime stability.
+- Eliminated silent application exits by replacing forced process termination with graceful exception handling.
+- Improved database connection diagnostics and authentication error reporting.
+- Verified authentication workflow using the default seeded accounts included in `cbs.sql`.
 
 ---
 
 # License
 
-This project is intended for **educational and academic purposes**.
+This project is developed for **educational, learning, and academic purposes**. It demonstrates the implementation of a simplified Core Banking System using Python, MySQL, and a modular command-line architecture.
