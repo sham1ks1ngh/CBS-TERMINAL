@@ -1,6 +1,102 @@
-# employees_info.py (Append/Update these sections)
-import mysql.connector
+# employees_info.py
+import pymysql
 from connection import connect_db
+
+def view_employee_details():
+    """Fetches and displays the specific profile metrics of a target employee."""
+    print("\n" + "-"*15 + " VIEW STAFF PROFILE " + "-"*15)
+    emp_id = input("Enter Employee ID: ").strip()
+
+    db = connect_db()
+    if not db:
+        return
+    cursor = db.cursor(pymysql.cursors.DictCursor)
+
+    try:
+        cursor.execute("SELECT emp_id, username, fname, lname, dept_id, `right`, status FROM employees WHERE emp_id = %s", (emp_id,))
+        row = cursor.fetchone()
+
+        if row:
+            print("\n" + "="*40)
+            print(f"EMPLOYEE ID    : {row['emp_id']}")
+            print(f"FULL NAME      : {row['fname']} {row['lname']}")
+            print(f"LOGIN USERNAME : {row['username']}")
+            print(f"DEPARTMENT CODE: {row['dept_id']}")
+            print(f"CLEARANCE TIER : {str(row['right']).upper()}")
+            print(f"WORKER STATUS  : {row['status']}")
+            print("="*40 + "\n")
+        else:
+            print(f"[Record Error] No employee found matching ID: {emp_id}\n")
+    except pymysql.MySQLError as err:
+        print(f"[Database Error] Query execution failure: {err}\n")
+    finally:
+        cursor.close()
+        db.close()
+
+def view_all_employees_table():
+    """Prints a structured tabular master ledger overview of all employees."""
+    db = connect_db()
+    if not db:
+        return
+    cursor = db.cursor(pymysql.cursors.DictCursor)
+
+    try:
+        cursor.execute("SELECT emp_id, fname, lname, username, `right`, status FROM employees")
+        rows = cursor.fetchall()
+
+        if rows:
+            print("\n" + "="*75)
+            print(f"{'EMP ID':<8} | {'STAFF NAME':<25} | {'USERNAME':<15} | {'ROLE':<10} | {'STATUS':<8}")
+            print("="*75)
+            for row in rows:
+                full_name = f"{row['fname']} {row['lname']}"
+                print(f"{row['emp_id']:<8} | {full_name:<25} | {row['username']:<15} | {str(row['right']).upper():<10} | {row['status']:<8}")
+            print("="*75 + "\n")
+        else:
+            print("[System Alert] The employee registry ledger is empty.\n")
+    except pymysql.MySQLError as err:
+        print(f"[Database Error] Table compilation failure: {err}\n")
+    finally:
+        cursor.close()
+        db.close()
+
+def edit_employee_details(user_right):
+    """Allows administrators to update an employee's department classification code."""
+    if user_right.lower() != "admin":
+        print("\n[ACCESS DENIED] Security Exception: Only Admins can modify personnel records.\n")
+        return
+
+    print("\n" + "-"*15 + " EDIT STAFF RECORD PARAMETERS " + "-"*15)
+    emp_id = input("Enter Employee ID to Update: ").strip()
+
+    db = connect_db()
+    if not db:
+        return
+    cursor = db.cursor(pymysql.cursors.DictCursor)
+
+    try:
+        cursor.execute("SELECT fname, lname, dept_id FROM employees WHERE emp_id = %s", (emp_id,))
+        row = cursor.fetchone()
+
+        if not row:
+            print(f"[Record Error] No employee profile found matching ID: {emp_id}\n")
+            return
+
+        print(f"Current Department Code for {row['fname']} {row['lname']}: {row['dept_id']}")
+        new_dept = input("Enter New Department Code (e.g., D02): ").strip().upper()
+
+        if not new_dept:
+            print("[Update Aborted] Department code input field cannot be blank.\n")
+            return
+
+        cursor.execute("UPDATE employees SET dept_id = %s WHERE emp_id = %s", (new_dept, emp_id))
+        db.commit()
+        print(f"[SUCCESS] Department assignment for Employee ID {emp_id} has been updated.\n")
+    except pymysql.MySQLError as err:
+        print(f"[Database Error] Modification write failed: {err}\n")
+    finally:
+        cursor.close()
+        db.close()
 
 def add_new_employee(user_right):
     """Allows administrators to onboard a brand new employee worker."""
@@ -38,12 +134,11 @@ def add_new_employee(user_right):
         db.commit()
         new_emp_id = cursor.lastrowid
         print(f"\n[SUCCESS] Employee onboarded safely! Generated Employee ID: {new_emp_id}\n")
-    except mysql.connector.Error as err:
+    except pymysql.MySQLError as err:
         print(f"[Database Error] Integrity check failed. Username may already exist: {err}\n")
     finally:
         cursor.close()
         db.close()
-
 
 def remove_employee(user_right):
     """Permanently offboards an employee from the system registry database."""
@@ -73,14 +168,14 @@ def remove_employee(user_right):
             print(f"[SUCCESS] Employee ID {emp_id} completely removed from access records.\n")
         else:
             print("Operation aborted safely.\n")
-    except mysql.connector.Error as err:
+    except pymysql.MySQLError as err:
         print(f"[Database Error] Could not isolate employee profile: {err}\n")
     finally:
         cursor.close()
         db.close()
 
-
 def employee_menu_portal(user_right):
+    """Main routing dashboard for workforce management operations."""
     if user_right.lower() != "admin":
         print("\n[ACCESS DENIED] Restricted Space: This portal requires Administrator clearance.\n")
         return
