@@ -1,5 +1,5 @@
 # status.py
-import mysql.connector
+import pymysql
 from connection import connect_db
 
 def manage_entity_status(table_name, id_column_name, entity_label):
@@ -9,7 +9,9 @@ def manage_entity_status(table_name, id_column_name, entity_label):
     db = connect_db()
     if not db:
         return
-    cursor = db.cursor(dictionary=True)
+    
+    # FIX: Explicitly naming the 'cursor' keyword argument for PyMySQL
+    cursor = db.cursor(cursor=pymysql.cursors.DictCursor)
     
     try:
         # 1. Fetch current status profile
@@ -54,10 +56,10 @@ def manage_entity_status(table_name, id_column_name, entity_label):
             update_query = f"UPDATE {table_name} SET status = %s WHERE {id_column_name} = %s"
             cursor.execute(update_query, (new_status, target_id))
             db.commit()
-            print(f"\n[SUCCESS] {entity_label} status updated to '{new_status}' safely.")
+            print(f"\n[SUCCESS] {entity_label} status updated to '{new_status}' safely.\n")
             
-    except mysql.connector.Error as err:
-        print(f"[Database Write Error] Status update execution failed: {err}")
+    except pymysql.MySQLError as err:
+        print(f"[Database Write Error] Status update execution failed: {err}\n")
     finally:
         cursor.close()
         db.close()
