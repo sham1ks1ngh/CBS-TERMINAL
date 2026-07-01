@@ -1,5 +1,5 @@
 # banking_operations.py
-import mysql.connector
+import pymysql
 from connection import connect_db
 
 def execute_credit():
@@ -18,7 +18,7 @@ def execute_credit():
     db = connect_db()
     if not db:
         return
-    cursor = db.cursor(dictionary=True)
+    cursor = db.cursor(pymysql.cursors.DictCursor)
 
     try:
         cursor.execute("SELECT acc_holder FROM customers WHERE acc_id = %s", (acc_id,))
@@ -40,7 +40,7 @@ def execute_credit():
 
         db.commit()
         print(f"[SUCCESS] ₹{amount:,.2f} credited successfully to Account {acc_id}!\n")
-    except mysql.connector.Error as err:
+    except pymysql.MySQLError as err:
         db.rollback()
         print(f"[Transaction Failed] Database safety rollback executed. Error: {err}\n")
     finally:
@@ -64,7 +64,7 @@ def execute_debit():
     db = connect_db()
     if not db:
         return
-    cursor = db.cursor(dictionary=True)
+    cursor = db.cursor(pymysql.cursors.DictCursor)
 
     try:
         cursor.execute("SELECT acc_holder, current_balance FROM customers WHERE acc_id = %s", (acc_id,))
@@ -90,7 +90,7 @@ def execute_debit():
 
         db.commit()
         print(f"[SUCCESS] ₹{amount:,.2f} debited safely from Account {acc_id}!\n")
-    except mysql.connector.Error as err:
+    except pymysql.MySQLError as err:
         db.rollback()
         print(f"[Transaction Failed] Database safety rollback executed. Error: {err}\n")
     finally:
@@ -120,7 +120,7 @@ def execute_transfer():
     db = connect_db()
     if not db:
         return
-    cursor = db.cursor(dictionary=True)
+    cursor = db.cursor(pymysql.cursors.DictCursor)
 
     try:
         cursor.execute("SELECT acc_holder, current_balance FROM customers WHERE acc_id = %s", (sender_id,))
@@ -145,7 +145,7 @@ def execute_transfer():
 
         db.commit()
         print(f"[SUCCESS] Inter-account transfer complete! ₹{amount:,.2f} moved from {sender_id} to {receiver_id}.\n")
-    except mysql.connector.Error as err:
+    except pymysql.MySQLError as err:
         db.rollback()
         print(f"[CRITICAL ERROR] Inter-account routing malfunction. Transaction rolled back. Details: {err}\n")
     finally:
@@ -163,12 +163,11 @@ def view_transaction_history():
     db = connect_db()
     if not db:
         return
-    cursor = db.cursor(dictionary=True)
+    cursor = db.cursor(pymysql.cursors.DictCursor)
     
     try:
         if mode == "1":
             acc_id = input("Enter Target Account ID: ").strip()
-            # Find rows where the account was either the sender OR the receiver
             query = """
                 SELECT txn_id, COALESCE(sender_acc, 'CASH') as sender, COALESCE(receiver_acc, 'CASH') as receiver, 
                        txn_type, amount, timestamp 
@@ -194,7 +193,6 @@ def view_transaction_history():
             print("\n[Audit Alert] No ledger history entries match these parameters.\n")
             return
             
-        # Display Grid Table Parameters
         header_format = "| {:<7} | {:<12} | {:<12} | {:<10} | {:>14} | {:<21} |"
         row_format    = "| {:<7} | {:<12} | {:<12} | {:<10} | {:>14,.2f} | {:<21} |"
         border = "-" * 88
@@ -204,7 +202,6 @@ def view_transaction_history():
         print(border)
         
         for row in rows:
-            # Re-format timestamp string for presentation clarity
             ts_str = row['timestamp'].strftime('%Y-%m-%d %H:%M:%S') if row['timestamp'] else 'N/A'
             print(row_format.format(
                 row['txn_id'],
@@ -216,7 +213,7 @@ def view_transaction_history():
             ))
         print(border + "\n")
         
-    except mysql.connector.Error as err:
+    except pymysql.MySQLError as err:
         print(f"[Ledger Query Failure] System error reading transactions table: {err}\n")
     finally:
         cursor.close()
